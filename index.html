@@ -18,6 +18,7 @@
             -moz-osx-font-smoothing: grayscale;
             background-color: #333;
             overflow: hidden; /* Prevent scrolling */
+            touch-action: manipulation; /* Improved touch handling for mobile */
         }
 
         #gameCanvas {
@@ -222,7 +223,7 @@
     <div class="game-container relative">
         <div id="scorePanel" class="score-panel" style="display: none;">
             <p id="scoreDisplay">Score: 0</p>
-            <p id="earningDisplay">Earning: 0 PKR</p>
+            <p id="earningDisplay">Earnings: 0 PKR</p>
         </div>
         
         <!-- Main Menu -->
@@ -231,7 +232,7 @@
             <p id="highScoreText">High Score: 0</p>
             <div class="mt-4 flex flex-col items-center gap-2">
                 <button id="startGameButton" class="game-button">Play</button>
-                <button id="howToEarnButton" class="game-button">How to earn money?</button>
+                <button id="howToEarnButton" class="game-button">How to Earn?</button>
                 <button id="chooseShapeButton" class="game-button">Choose Bird Shape</button>
                 <a id="whatsappButtonMenu" href="https://wa.me/+923455672710" target="_blank" class="game-button whatsapp-button">
                     <i class="fab fa-whatsapp"></i> Contact Us
@@ -244,9 +245,8 @@
             <h2 class="text-2xl">How to Earn</h2>
             <div class="article-content">
                 <p class="text-sm text-left leading-relaxed">
-                    1 PKR if you get 50 Coins, you have the best chance to earn unlimited in one day. You can collect unlimited coins in the game.
-                    For every 50 coins you collect, you can earn 1 PKR. If you collect 50 coins or more, a notification will appear when the game ends.
-                    Take a screenshot of that notification and send it to us on WhatsApp to get your reward.
+                    You can earn 1 PKR for every 50 coins you collect. There is no limit, so you have a great opportunity to earn unlimited money in a day.
+                    If you collect 50 or more coins, a special notification will appear when the game ends. Take a screenshot of this notification and send it to us on WhatsApp to claim your reward.
                 </p>
             </div>
             <button id="backFromArticleButton" class="game-button bg-gray-500 hover:bg-gray-600">Back</button>
@@ -275,7 +275,7 @@
         <div id="winMessageBox" class="game-message" style="display: none;">
             <h2 id="winText">Congratulations! 🎉</h2>
             <p id="winScore" class="text-lg font-semibold"></p>
-            <p class="text-sm font-light leading-relaxed my-2">You have earned 1 PKR! Get a screenshot of this page and send it to us on WhatsApp.</p>
+            <p class="text-sm font-light leading-relaxed my-2">You have earned 1 PKR! Take a screenshot of this page and send it to us on WhatsApp.</p>
             <p id="winDateTime" class="text-xs text-gray-700 mt-2"></p>
             <div class="flex flex-col items-center gap-2 mt-4">
                 <a id="whatsappButtonWin" href="https://wa.me/+923455672710" target="_blank" class="game-button whatsapp-button">
@@ -290,8 +290,8 @@
         
         <!-- Footer -->
         <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-gray-400 text-xs text-center">
-            <p>Game developed by Tino Company</p>
-            <p class="text-gray-500 text-xxs">Owner Malik Arslan</p>
+            <p>Game by Tino Company</p>
+            <p class="text-gray-500 text-xxs">Owner: Malik Arsalan</p>
         </div>
     </div>
 
@@ -348,9 +348,6 @@
         let pipeGap = basePipeGap;
         let pipeCreationInterval = 1800; // milliseconds 
         let lastPipeCreationTime = 0;
-        let isSlowMotionActive = false;
-        const slowMotionDuration = 5000;
-        const originalGravity = 0.25;
 
         // Power-up and item settings
         let gameItems = [];
@@ -480,7 +477,7 @@
             }
         };
 
-        // Parallax background layers for clouds
+        // Parallax background layers for clouds (optimized for fewer draws)
         const clouds = [
             { // Layer 1: slower, larger clouds
                 x: 0, y: 50, speed: 0.5,
@@ -540,11 +537,11 @@
         }
 
 
-        // Bird properties
+        // Bird properties (reduced lift for smaller jumps)
         const bird = {
             x: 50, y: canvas.height / 2,
             width: birdSprite.width, height: birdSprite.height, 
-            gravity: originalGravity, lift: -6, velocity: 0, rotation: 0,
+            gravity: 0.25, lift: -4, velocity: 0, rotation: 0,
             draw: function(timestamp) {
                 if (timestamp - birdSprite.lastFrameTime > birdSprite.frameRate) {
                     birdSprite.frameIndex = (birdSprite.frameIndex + 1) % birdSprite.frames.length;
@@ -607,8 +604,9 @@
             // Random chance to add a coin or power-up to the pipe gap
             if (Math.random() > 0.5) { // 50% chance for an item
                 let itemType = 'coin';
-                if (Math.random() > 0.8) { // 20% chance for a power-up
-                    itemType = Math.random() > 0.5 ? 'shield' : 'slow-motion';
+                // Only spawn shield power-up now, no slow-motion
+                if (Math.random() > 0.8) { // 20% chance for a shield power-up
+                    itemType = 'shield';
                 }
                 gameItems.push({
                     x: newPipe.x + pipeWidth / 2 - itemSize / 2,
@@ -681,11 +679,6 @@
                     ctx.beginPath();
                     ctx.arc(item.x + item.size / 2, item.y, item.size / 2, 0, 2 * Math.PI);
                     ctx.fill();
-                } else if (item.type === 'slow-motion') {
-                    ctx.fillStyle = 'rgba(255, 69, 0, 0.7)'; // Orange color
-                    ctx.beginPath();
-                    ctx.arc(item.x + item.size / 2, item.y, item.size / 2, 0, 2 * Math.PI);
-                    ctx.fill();
                 }
             });
         }
@@ -722,28 +715,13 @@
                 if (bird.x < item.x + item.size && bird.x + bird.width > item.x &&
                     bird.y < item.y + item.size && bird.y + bird.height > item.y) {
                     if (item.type === 'coin') {
-                        score++;
                         coinsCollected++;
                         currentEarning = (coinsCollected * earningPerCoin).toFixed(2);
                         playCoinSound();
-                        scoreDisplay.textContent = `Score: ${score}`;
-                        earningDisplay.textContent = `Earning: ${currentEarning} PKR`;
+                        earningDisplay.textContent = `Earnings: ${currentEarning} PKR`;
                     } else if (item.type === 'shield') {
                         shieldTimer = shieldDuration;
                         playPowerupSound();
-                    } else if (item.type === 'slow-motion') {
-                        isSlowMotionActive = true;
-                        pipeSpeed /= 2;
-                        bird.gravity /= 2;
-                        pipeCreationInterval *= 2;
-                        playPowerupSound();
-                        setTimeout(() => {
-                            isSlowMotionActive = false;
-                            pipeSpeed = basePipeSpeed + (Math.floor(score / difficultyIncreaseThreshold) * 0.1);
-                            bird.gravity = originalGravity;
-                            pipeCreationInterval = 1800 - (Math.floor(score / difficultyIncreaseThreshold) * 40);
-                            pipeCreationInterval = Math.max(pipeCreationInterval, 1000);
-                        }, slowMotionDuration);
                     }
                     item.collected = true;
                     return true;
@@ -756,21 +734,23 @@
             pipes.forEach(pipe => {
                 if (pipe.x + pipeWidth < bird.x && !pipe.scored) {
                     pipe.scored = true;
+                    score++;
+                    scoreDisplay.textContent = `Score: ${score}`;
                     if (score % difficultyIncreaseThreshold === 0) {
-                        // Increase difficulty, but not if slow motion is active
-                        if (!isSlowMotionActive) {
-                            pipeSpeed += 0.1;
-                            pipeGap = Math.max(pipeGap - 2, minPipeGap); 
-                            pipeCreationInterval = Math.max(pipeCreationInterval - 40, 1000);
-                        }
+                        // Increase difficulty
+                        pipeSpeed += 0.1;
+                        pipeGap = Math.max(pipeGap - 2, minPipeGap); 
+                        pipeCreationInterval = Math.max(pipeCreationInterval - 40, 1000);
                     }
                 }
             });
         }
 
-        // Weather effects (simple rain particle system)
+        // Weather effects (simple rain particle system, optimized with limit)
         let particles = [];
+        const maxParticles = 50; // Limit particles for performance
         function createParticle() {
+            if (particles.length >= maxParticles) return;
             particles.push({
                 x: Math.random() * canvas.width,
                 y: 0,
@@ -867,7 +847,7 @@
 
         function showGameOverScreen() {
             finalScore.textContent = `Final Score: ${score}`;
-            earningInfo.textContent = `Coins Collected: ${coinsCollected} | Total Earning: ${currentEarning} PKR`;
+            earningInfo.textContent = `Coins Collected: ${coinsCollected} | Total Earnings: ${currentEarning} PKR`;
             
             gameOverMessageBox.style.display = 'block';
             winMessageBox.style.display = 'none';
@@ -908,6 +888,7 @@
             pipeCreationInterval = 1800;
             lastPipeCreationTime = 0;
             shieldTimer = 0;
+            particles = [];
             
             // Reset bird position and velocity
             bird.x = 50;
@@ -920,7 +901,7 @@
             canvas.style.display = 'block';
             scorePanel.style.display = 'flex';
             scoreDisplay.textContent = 'Score: 0';
-            earningDisplay.textContent = 'Earning: 0 PKR';
+            earningDisplay.textContent = 'Earnings: 0 PKR';
             birdSprite.updateShape(); // Update bird shape on game start
             
             animationFrameId = requestAnimationFrame(gameLoop);
@@ -956,7 +937,8 @@
         }
 
         // Event listeners for player input
-        function handleFlap() {
+        function handleFlap(e) {
+            e.preventDefault(); // Prevent default touch behavior for smoother mobile
             if (isPlaying) {
                 bird.flap();
                 playFlapSound();
@@ -972,10 +954,10 @@
         }
         window.addEventListener('resize', handleResize);
         canvas.addEventListener('click', handleFlap);
-        canvas.addEventListener('touchstart', handleFlap);
+        canvas.addEventListener('touchstart', handleFlap, { passive: false });
         document.addEventListener('keydown', e => {
             if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {
-                handleFlap();
+                handleFlap(e);
             }
         });
 
